@@ -27,10 +27,15 @@ app.add_typer(leads_app, name="leads")
 def campaigns_list(
     ctx: typer.Context,
     offset: int | None = typer.Option(None, "--offset", help="Pagination offset"),
-    limit: int | None = typer.Option(None, "--limit", help="Pagination limit (defaults to config)"),
+    client_id: int | None = typer.Option(None, "--client-id", help="Filter campaigns by client ID"),
+    include_tags: bool | None = typer.Option(
+        None,
+        "--include-tags/--no-include-tags",
+        help="Include tags in campaign list response",
+    ),
 ) -> None:
     cfg: Config = ctx.obj
-    params = {"offset": offset, "limit": limit if limit is not None else cfg.default_limit}
+    params = {"offset": offset, "client_id": client_id, "include_tags": include_tags}
     data = api_request(cfg, "GET", "/campaigns", params=params)
     emit(data, pretty=cfg.pretty, table_builder=campaigns_table)
 
@@ -204,7 +209,7 @@ def campaign_leads_update(
     except Exception as exc:
         print_error("validation_error", f"Invalid request body: {exc}")
         raise typer.Exit(1)
-    data = api_request(cfg, "PATCH", f"/campaigns/{campaign_id}/leads/{lead_id}", json_body=body)
+    data = api_request(cfg, "POST", f"/campaigns/{campaign_id}/leads/{lead_id}", json_body=body)
     emit(data, pretty=cfg.pretty)
 
 

@@ -59,6 +59,8 @@ smartlead config set defaults.limit 100
 
 ```bash
 smartlead campaigns list
+smartlead campaigns list --client-id 123
+smartlead campaigns list --include-tags
 smartlead campaigns get 12345
 smartlead campaigns create --name "New Campaign"
 smartlead campaigns status 12345 --status PAUSED

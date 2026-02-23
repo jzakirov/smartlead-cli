@@ -51,6 +51,6 @@ def webhooks_delete(
         raise typer.Exit(1)
     cfg: Config = ctx.obj
     data = api_request(
-        cfg, "DELETE", f"/campaigns/{campaign_id}/webhooks", params={"webhook_id": webhook_id}
+        cfg, "DELETE", f"/campaigns/{campaign_id}/webhooks", json_body={"id": webhook_id}
     )
     emit(data, pretty=cfg.pretty)
