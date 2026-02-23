@@ -1,12 +1,11 @@
 """smartlead CLI root application."""
 
-from __future__ import annotations
-
 from importlib.metadata import version
 from typing import Optional
 
 import typer
 
+from smartlead_cli.commands import campaigns, config_cmd, leads, raw, webhooks
 from smartlead_cli.config import load_config
 
 
@@ -15,8 +14,6 @@ def _version_callback(value: bool) -> None:
         typer.echo(f"smartlead-cli {version('smartlead-cli')}")
         raise typer.Exit()
 
-
-from smartlead_cli.commands import campaigns, config_cmd, leads, raw, webhooks  # noqa: E402
 
 app = typer.Typer(
     name="smartlead",
@@ -49,7 +46,13 @@ def main(
         help="Smartlead API base URL (overrides config)",
         show_envvar=True,
     ),
-    pretty: bool = typer.Option(False, "--pretty", help="Render Rich tables / pretty JSON when available"),
+    pretty: Optional[bool] = typer.Option(
+        None,
+        "--pretty/--no-pretty",
+        envvar="SMARTLEAD_PRETTY",
+        help="Render Rich tables / pretty JSON when available (overrides config)",
+        show_envvar=True,
+    ),
     _version: Optional[bool] = typer.Option(
         None,
         "--version",
@@ -61,6 +64,5 @@ def main(
 ) -> None:
     """Interact with Smartlead APIs via direct HTTP requests."""
     ctx.ensure_object(dict)
-    cfg = load_config(api_key_flag=api_key, base_url_flag=base_url)
-    cfg.pretty = pretty
+    cfg = load_config(api_key_flag=api_key, base_url_flag=base_url, pretty_flag=pretty)
     ctx.obj = cfg

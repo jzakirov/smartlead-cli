@@ -1,7 +1,5 @@
 """Output helpers: JSON, structured errors, and optional Rich tables."""
 
-from __future__ import annotations
-
 import json
 import sys
 from typing import Any, Callable, Optional
@@ -31,7 +29,7 @@ def print_error(
         payload["status_code"] = status_code
     if detail is not None:
         payload["detail"] = detail
-    err_console.print_json(json.dumps({"error": payload}, ensure_ascii=False))
+    print(json.dumps({"error": payload}, ensure_ascii=False), file=sys.stderr)
 
 
 def emit(data: Any, pretty: bool = False, table_builder: TableBuilder | None = None) -> None:
@@ -53,7 +51,9 @@ def read_text_arg(value: str) -> str:
     return value
 
 
-def simple_table(rows: list[dict[str, Any]], columns: list[tuple[str, str]], title: str | None = None) -> Table:
+def simple_table(
+    rows: list[dict[str, Any]], columns: list[tuple[str, str]], title: str | None = None
+) -> Table:
     table = Table(title=title, box=box.SIMPLE_HEAVY, show_header=True, header_style="bold")
     for header, _ in columns:
         table.add_column(header)
@@ -83,7 +83,13 @@ def campaigns_table(data: Any) -> Table | None:
         return None
     return simple_table(
         display,
-        [("ID", "id"), ("Name", "name"), ("Status", "status"), ("Client", "client"), ("Created", "created")],
+        [
+            ("ID", "id"),
+            ("Name", "name"),
+            ("Status", "status"),
+            ("Client", "client"),
+            ("Created", "created"),
+        ],
         title="Campaigns",
     )
 
@@ -109,7 +115,13 @@ def campaign_leads_table(data: Any) -> Table | None:
         return None
     return simple_table(
         display,
-        [("Lead ID", "id"), ("Email", "email"), ("Name", "name"), ("Status", "status"), ("Seq", "sequence")],
+        [
+            ("Lead ID", "id"),
+            ("Email", "email"),
+            ("Name", "name"),
+            ("Status", "status"),
+            ("Seq", "sequence"),
+        ],
         title="Campaign Leads",
     )
 
@@ -132,21 +144,35 @@ def webhooks_table(data: Any) -> Table | None:
         )
     if not display:
         return None
-    return simple_table(display, [("ID", "id"), ("URL", "url"), ("Event", "event"), ("Active", "active")], title="Webhooks")
+    return simple_table(
+        display,
+        [("ID", "id"), ("URL", "url"), ("Event", "event"), ("Active", "active")],
+        title="Webhooks",
+    )
 
 
 def statistics_table(data: Any) -> Table | None:
     rows = _as_list(data)
     if rows is None:
         return None
-    keys = ["lead_id", "email", "status", "email_sequence_number", "open_count", "click_count", "reply_count"]
+    keys = [
+        "lead_id",
+        "email",
+        "status",
+        "email_sequence_number",
+        "open_count",
+        "click_count",
+        "reply_count",
+    ]
     first = next((r for r in rows if isinstance(r, dict)), None)
     if first is None:
         return None
     cols = [(k, k) for k in keys if any(isinstance(r, dict) and k in r for r in rows[:25])]
     if not cols:
         cols = [(k, k) for k in list(first.keys())[:6]]
-    return simple_table([r for r in rows[:200] if isinstance(r, dict)], cols, title="Campaign Statistics")
+    return simple_table(
+        [r for r in rows[:200] if isinstance(r, dict)], cols, title="Campaign Statistics"
+    )
 
 
 def _as_list(data: Any) -> list[Any] | None:

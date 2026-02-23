@@ -1,7 +1,5 @@
 """Serialization helpers for JSON and HTTP responses."""
 
-from __future__ import annotations
-
 import base64
 from datetime import date, datetime
 from pathlib import Path

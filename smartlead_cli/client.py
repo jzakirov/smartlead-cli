@@ -1,7 +1,5 @@
 """HTTP client wrapper for Smartlead API."""
 
-from __future__ import annotations
-
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -57,30 +55,46 @@ class SmartleadClient:
         url = _resolve_url(self.cfg.base_url, path)
         max_attempts = max(1, int(self.cfg.retries))
 
-        for attempt in range(max_attempts):
-            try:
-                with httpx.Client(timeout=self.cfg.timeout_seconds) as client:
-                    resp = client.request(method.upper(), url, params=merged_params, json=json_body, headers=headers)
-            except httpx.TimeoutException as exc:
-                if attempt < max_attempts - 1:
-                    time.sleep(min(2**attempt, 5))
+        with httpx.Client(timeout=self.cfg.timeout_seconds) as client:
+            for attempt in range(max_attempts):
+                try:
+                    resp = client.request(
+                        method.upper(), url, params=merged_params, json=json_body, headers=headers
+                    )
+                except httpx.TimeoutException as exc:
+                    if attempt < max_attempts - 1:
+                        time.sleep(min(2**attempt, 5))
+                        continue
+                    print_error(
+                        "timeout",
+                        f"Request timed out after {self.cfg.timeout_seconds}s",
+                        detail=str(exc),
+                    )
+                    raise typer.Exit(1)
+                except httpx.ConnectError as exc:
+                    if attempt < max_attempts - 1:
+                        time.sleep(min(2**attempt, 5))
+                        continue
+                    print_error("network_error", f"Connection failed: {exc}")
+                    raise typer.Exit(1)
+                except httpx.HTTPError as exc:
+                    print_error("network_error", f"Network error: {exc}")
+                    raise typer.Exit(1)
+
+                if resp.status_code in RETRYABLE_STATUS_CODES and attempt < max_attempts - 1:
+                    delay = _retry_after_seconds(resp) or min(2**attempt, 5)
+                    time.sleep(delay)
                     continue
-                print_error("timeout", f"Request timed out after {self.cfg.timeout_seconds}s", detail=str(exc))
-                raise typer.Exit(1)
-            except httpx.HTTPError as exc:
-                print_error("network_error", f"Network error: {exc}")
-                raise typer.Exit(1)
 
-            if resp.status_code in RETRYABLE_STATUS_CODES and attempt < max_attempts - 1:
-                delay = _retry_after_seconds(resp) or min(2**attempt, 5)
-                time.sleep(delay)
-                continue
+                if resp.status_code >= 400:
+                    _handle_error_response(resp)
+                    raise typer.Exit(1)
 
-            if resp.status_code >= 400:
-                _handle_error_response(resp)
-                raise typer.Exit(1)
-
-            return ResponseEnvelope(status_code=resp.status_code, headers=dict(resp.headers), data=_parse_response(resp))
+                return ResponseEnvelope(
+                    status_code=resp.status_code,
+                    headers=dict(resp.headers),
+                    data=_parse_response(resp),
+                )
 
         print_error("cli_error", "Unexpected request failure")
         raise typer.Exit(1)
@@ -166,7 +180,12 @@ def _handle_error_response(resp: httpx.Response) -> None:
 
     status = resp.status_code
     if status == 401:
-        print_error("auth_error", "Authentication failed. Check SMARTLEAD_API_KEY.", status_code=status, detail=detail)
+        print_error(
+            "auth_error",
+            "Authentication failed. Check SMARTLEAD_API_KEY.",
+            status_code=status,
+            detail=detail,
+        )
     elif status == 403:
         print_error("forbidden", "Permission denied.", status_code=status, detail=detail)
     elif status == 404:

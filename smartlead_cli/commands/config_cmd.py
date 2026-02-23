@@ -1,7 +1,5 @@
 """config subcommand: show / set / init."""
 
-from __future__ import annotations
-
 import sys
 
 import typer
@@ -9,9 +7,15 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from smartlead_cli.client import api_request
-from smartlead_cli.config import Config, CONFIG_PATH, config_as_dict, load_config, save_config, save_config_key
+from smartlead_cli.config import (
+    Config,
+    CONFIG_PATH,
+    config_as_dict,
+    load_config,
+    save_config,
+    save_config_key,
+)
 from smartlead_cli.output import print_error, print_json
-from smartlead_cli.serialize import to_data
 
 app = typer.Typer(name="config", help="Manage smartlead CLI configuration.", no_args_is_help=True)
 console = Console()
@@ -40,7 +44,14 @@ def config_set(
 
 
 @app.command("init")
-def config_init(ctx: typer.Context) -> None:
+def config_init(
+    ctx: typer.Context,
+    skip_validation: bool = typer.Option(
+        False,
+        "--skip-validation",
+        help="Save config without validating the API key (useful offline).",
+    ),
+) -> None:
     if not sys.stdin.isatty():
         print_error("validation_error", "`smartlead config init` requires an interactive terminal.")
         raise typer.Exit(1)
@@ -60,20 +71,22 @@ def config_init(ctx: typer.Context) -> None:
     new_cfg.api_key = api_key
     new_cfg.base_url = base_url or new_cfg.base_url
 
-    console.print("\nValidating token with `GET /campaigns`…")
-    try:
-        result = api_request(new_cfg, "GET", "/campaigns")
-        data = to_data(result)
-        count = len(data) if isinstance(data, list) else None
-        if count is not None:
-            console.print(f"[green]✓[/green] Token is valid (received {count} campaigns)")
-        else:
-            console.print("[green]✓[/green] Token is valid")
-    except typer.Exit:
-        raise
-    except Exception as exc:
-        print_error("auth_error", f"Validation failed: {exc}")
-        raise typer.Exit(1)
+    if not skip_validation:
+        console.print("\nValidating token with `GET /campaigns`…")
+        try:
+            result = api_request(new_cfg, "GET", "/campaigns")
+            count = len(result) if isinstance(result, list) else None
+            if count is not None:
+                console.print(f"[green]✓[/green] Token is valid (received {count} campaigns)")
+            else:
+                console.print("[green]✓[/green] Token is valid")
+        except typer.Exit:
+            raise
+        except Exception as exc:
+            print_error("auth_error", f"Validation failed: {exc}")
+            raise typer.Exit(1)
+    else:
+        console.print("\n[dim]Skipping token validation (--skip-validation)[/dim]")
 
     save_config(new_cfg)
     console.print(f"\n[green]✓[/green] Config saved to {CONFIG_PATH}")

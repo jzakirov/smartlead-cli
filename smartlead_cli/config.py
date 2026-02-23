@@ -1,8 +1,7 @@
 """Configuration management for smartlead-cli."""
 
-from __future__ import annotations
-
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -26,6 +25,7 @@ class Config:
 def load_config(
     api_key_flag: Optional[str] = None,
     base_url_flag: Optional[str] = None,
+    pretty_flag: Optional[bool] = None,
 ) -> Config:
     """Load config with priority: file < env < CLI flags."""
     cfg = Config()
@@ -45,18 +45,27 @@ def load_config(
                 cfg.retries = int(core["retries"])
             if defaults.get("limit") is not None:
                 cfg.default_limit = int(defaults["limit"])
-        except Exception:
-            pass
+            if defaults.get("pretty") is not None:
+                cfg.pretty = bool(defaults["pretty"])
+        except Exception as exc:
+            print(
+                f"smartlead: warning: could not parse config file {CONFIG_PATH}: {exc}",
+                file=sys.stderr,
+            )
 
     if os.environ.get("SMARTLEAD_API_KEY"):
         cfg.api_key = os.environ["SMARTLEAD_API_KEY"]
     if os.environ.get("SMARTLEAD_BASE_URL"):
         cfg.base_url = os.environ["SMARTLEAD_BASE_URL"]
+    if os.environ.get("SMARTLEAD_PRETTY"):
+        cfg.pretty = os.environ["SMARTLEAD_PRETTY"].lower() in {"1", "true", "yes"}
 
     if api_key_flag is not None:
         cfg.api_key = api_key_flag
     if base_url_flag is not None:
         cfg.base_url = base_url_flag
+    if pretty_flag is not None:
+        cfg.pretty = pretty_flag
 
     if cfg.timeout_seconds <= 0:
         cfg.timeout_seconds = 30.0
@@ -90,6 +99,11 @@ def save_config(cfg: Config) -> None:
     doc["core"]["timeout_seconds"] = float(cfg.timeout_seconds)
     doc["core"]["retries"] = int(cfg.retries)
     doc["defaults"]["limit"] = int(cfg.default_limit)
+
+    if cfg.pretty:
+        doc["defaults"]["pretty"] = True
+    elif "pretty" in doc["defaults"]:
+        del doc["defaults"]["pretty"]
 
     CONFIG_PATH.write_text(tomlkit.dumps(doc))
 
@@ -129,6 +143,7 @@ def config_as_dict(cfg: Config, reveal: bool = False) -> dict[str, Any]:
         },
         "defaults": {
             "limit": cfg.default_limit,
+            "pretty": cfg.pretty,
         },
     }
 
