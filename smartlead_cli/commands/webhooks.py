@@ -6,6 +6,7 @@ from smartlead_cli.args import load_json_input
 from smartlead_cli.client import api_request
 from smartlead_cli.config import Config
 from smartlead_cli.output import emit, print_error, webhooks_table
+from smartlead_cli.schemas import CampaignWebhookUpsertBodyModel
 
 app = typer.Typer(name="webhooks", help="Campaign webhook operations.", no_args_is_help=True)
 
@@ -32,6 +33,11 @@ def webhooks_upsert(
     cfg: Config = ctx.obj
     try:
         body = load_json_input(body_json, body_file)
+    except Exception as exc:
+        print_error("validation_error", f"Invalid request body: {exc}")
+        raise typer.Exit(1)
+    try:
+        CampaignWebhookUpsertBodyModel.model_validate(body)
     except Exception as exc:
         print_error("validation_error", f"Invalid request body: {exc}")
         raise typer.Exit(1)

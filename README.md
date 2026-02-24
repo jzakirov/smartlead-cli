@@ -50,7 +50,7 @@ smartlead config set defaults.limit 100
 ## Commands (v1)
 
 - `config` - manage local config
-- `campaigns` - list/get/create/delete/update status + analytics/statistics + campaign leads
+- `campaigns` - list/get/create/update/schedule/delete/status + analytics/statistics + campaign leads
 - `leads` - a few global lead operations
 - `webhooks` - campaign webhook helpers
 - `raw` - direct API access for unsupported endpoints
@@ -63,6 +63,8 @@ smartlead campaigns list --client-id 123
 smartlead campaigns list --include-tags
 smartlead campaigns get 12345
 smartlead campaigns create --name "New Campaign"
+smartlead campaigns update 12345 --name "New Campaign (edited)"
+smartlead campaigns schedule 12345 --timezone "America/New_York" --day 1 --day 2 --day 3 --day 4 --day 5 --start-hour 09:00 --end-hour 18:00
 smartlead campaigns status 12345 --status PAUSED
 smartlead campaigns statistics 12345 --limit 50 --offset 0
 smartlead campaigns analytics top 12345
@@ -73,7 +75,9 @@ Campaign leads:
 
 ```bash
 smartlead campaigns leads list 12345
+smartlead campaigns leads get 12345 67890
 smartlead campaigns leads add 12345 --body-file leads.json
+smartlead campaigns leads patch 12345 67890 --first-name "Updated" --custom-fields-file custom-fields.json
 smartlead campaigns leads update 12345 67890 --body-file lead-update.json
 smartlead campaigns leads pause 12345 67890
 smartlead campaigns leads resume 12345 67890 --delay-days 2
@@ -104,6 +108,13 @@ smartlead raw request --method GET --path /campaigns
 smartlead raw request --method POST --path /campaigns/12345/status --query status=PAUSED
 smartlead raw request --method POST --path /campaigns/12345/leads --body-file leads.json
 ```
+
+## Preferred Command Style (LLMs / Agents)
+
+- Prefer curated commands (`campaigns`, `leads`, `webhooks`) over `raw` whenever possible.
+- Prefer `--body-file` over inline `--body-json` for non-trivial payloads (less shell escaping, easier review).
+- Normalize emails to lowercase before lookups/updates
+- For lead edits, prefer `smartlead campaigns leads patch ...` if you only want to change a few fields;
 
 ## Output
 
