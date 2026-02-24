@@ -4,7 +4,7 @@ Strict by default (`extra="forbid"`), but intentionally scoped to curated comman
 `raw` remains the escape hatch and is not validated here.
 """
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr, ValidationError
 from pydantic import field_validator, model_validator
@@ -173,18 +173,55 @@ class CampaignLeadUpdateBodyModel(LeadInputModel):
         return self
 
 
+SMARTLEAD_WEBHOOK_EVENT_TYPES = (
+    "EMAIL_SENT",
+    "EMAIL_OPEN",
+    "EMAIL_BOUNCE",
+    "EMAIL_LINK_CLICK",
+    "EMAIL_REPLY",
+    "LEAD_UNSUBSCRIBED",
+    "LEAD_CATEGORY_UPDATED",
+    "CAMPAIGN_STATUS_CHANGED",
+    "UNTRACKED_REPLIES",
+    "MANUAL_STEP_REACHED",
+)
+
+SmartleadWebhookEventType = Literal[
+    "EMAIL_SENT",
+    "EMAIL_OPEN",
+    "EMAIL_BOUNCE",
+    "EMAIL_LINK_CLICK",
+    "EMAIL_REPLY",
+    "LEAD_UNSUBSCRIBED",
+    "LEAD_CATEGORY_UPDATED",
+    "CAMPAIGN_STATUS_CHANGED",
+    "UNTRACKED_REPLIES",
+    "MANUAL_STEP_REACHED",
+]
+
+
 class CampaignWebhookUpsertBodyModel(CliSchemaModel):
     cli_label = "campaign webhook upsert body"
 
     id: StrictInt | None = None
     name: StrictStr
     webhook_url: StrictStr
-    event_types: list[StrictStr]
-    categories: list[StrictStr] | None = None
+    event_types: list[SmartleadWebhookEventType]
+    categories: list[StrictStr]
 
     @field_validator("event_types")
     @classmethod
     def _validate_event_types_nonempty(cls, value: list[str]) -> list[str]:
         if not value:
             raise ValueError("event_types must not be empty")
+        return value
+
+    @field_validator("categories")
+    @classmethod
+    def _validate_categories_nonempty(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("categories must not be empty")
+        for i, category in enumerate(value):
+            if category == "":
+                raise ValueError(f"categories[{i}] must not be empty")
         return value

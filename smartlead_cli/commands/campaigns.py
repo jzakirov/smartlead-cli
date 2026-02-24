@@ -6,6 +6,7 @@ import typer
 
 from smartlead_cli.args import load_json_input, maybe_load_json_input
 from smartlead_cli.client import api_request
+from smartlead_cli.confirm import require_yes_or_confirm
 from smartlead_cli.config import Config
 from smartlead_cli.output import (
     campaign_leads_table,
@@ -357,11 +358,9 @@ def campaigns_schedule_update(
 def campaigns_delete(
     ctx: typer.Context,
     campaign_id: int = typer.Argument(..., help="Campaign ID"),
-    yes: bool = typer.Option(False, "--yes", help="Confirm deletion"),
+    yes: bool = typer.Option(False, "--yes", help="Skip confirmation prompt"),
 ) -> None:
-    if not yes:
-        print_error("validation_error", "Deletion requires --yes")
-        raise typer.Exit(1)
+    require_yes_or_confirm(yes, f"Delete campaign {campaign_id}?")
     cfg: Config = ctx.obj
     data = api_request(cfg, "DELETE", f"/campaigns/{campaign_id}")
     emit(data, pretty=cfg.pretty)
@@ -662,11 +661,9 @@ def campaign_leads_delete(
     ctx: typer.Context,
     campaign_id: int = typer.Argument(..., help="Campaign ID"),
     lead_id: int = typer.Argument(..., help="Lead ID"),
-    yes: bool = typer.Option(False, "--yes", help="Confirm deletion"),
+    yes: bool = typer.Option(False, "--yes", help="Skip confirmation prompt"),
 ) -> None:
-    if not yes:
-        print_error("validation_error", "Deletion requires --yes")
-        raise typer.Exit(1)
+    require_yes_or_confirm(yes, f"Delete lead {lead_id} from campaign {campaign_id}?")
     cfg: Config = ctx.obj
     data = api_request(cfg, "DELETE", f"/campaigns/{campaign_id}/leads/{lead_id}")
     emit(data, pretty=cfg.pretty)
