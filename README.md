@@ -82,7 +82,7 @@ smartlead campaigns leads update 12345 67890 --body-file lead-update.json
 smartlead campaigns leads pause 12345 67890
 smartlead campaigns leads resume 12345 67890 --delay-days 2
 smartlead campaigns leads unsubscribe 12345 67890
-smartlead campaigns leads delete 12345 67890 --yes
+smartlead campaigns leads delete 12345 67890
 smartlead campaigns leads message-history 12345 67890
 ```
 
@@ -98,7 +98,26 @@ Campaign webhooks:
 ```bash
 smartlead webhooks list 12345
 smartlead webhooks upsert 12345 --body-file webhook.json
-smartlead webhooks delete 12345 --webhook-id 555 --yes
+smartlead webhooks delete 12345 --webhook-id 555
+```
+
+Webhook `upsert` payload notes:
+
+- `event_types` allowed values: `EMAIL_SENT`, `EMAIL_OPEN`, `EMAIL_BOUNCE`, `EMAIL_LINK_CLICK`, `EMAIL_REPLY`, `LEAD_UNSUBSCRIBED`, `LEAD_CATEGORY_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `UNTRACKED_REPLIES`, `MANUAL_STEP_REACHED`
+- `categories` is required and must contain at least one Smartlead lead category name
+- Smartlead lead categories are workspace-specific/customizable labels, so there is no single global CLI enum for `categories`
+- If unsure which category names exist, inspect Smartlead UI lead categories or use Smartlead's "Test Webhook" / existing webhook payloads and copy the category labels
+
+Example `webhook.json`:
+
+```json
+{
+  "id": null,
+  "name": "Reply webhook",
+  "webhook_url": "https://example.com/webhook",
+  "event_types": ["EMAIL_REPLY"],
+  "categories": ["Interested"]
+}
 ```
 
 Raw endpoint access (fallback for full API surface):
@@ -113,8 +132,9 @@ smartlead raw request --method POST --path /campaigns/12345/leads --body-file le
 
 - Prefer curated commands (`campaigns`, `leads`, `webhooks`) over `raw` whenever possible.
 - Prefer `--body-file` over inline `--body-json` for non-trivial payloads (less shell escaping, easier review).
-- Normalize emails to lowercase before lookups/updates
-- For lead edits, prefer `smartlead campaigns leads patch ...` if you only want to change a few fields;
+- Normalize emails to lowercase before lookups/updates.
+- For lead edits, prefer `smartlead campaigns leads patch ...` if you only want to change a few fields.
+- Delete commands prompt for confirmation in interactive shells; use `--yes` in scripts/automation.
 
 ## Output
 
